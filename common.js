@@ -20,8 +20,11 @@ const authenticateUserPass = async (username, password, usertype = 'customer') =
 }
 
 const authenticateToken = async (token, usertype = 'customer') => {
+    console.log("Trying to auth token");
+    console.log(token);
     let queryStatement = `SELECT COUNT(*)::int FROM users INNER JOIN ${usertype} USING (username) WHERE users.token = $1`; //No problem with SQL injection. usertype supplied by us.
     let res = await pool.one(queryStatement, [token]);
+    console.log(res);
     if (res.count === 0) return Promise.reject('Invalid token.');
     return Promise.resolve();
 }

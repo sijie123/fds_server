@@ -21,6 +21,45 @@ restaurant.get('/:rname', function (req, res) {
     .catch(err => res.failure(`${err}`))
 })
 
+restaurant.post('/:rname/stats', [
+  cookie('authToken').exists().custom(token => {
+    return authenticateToken(token, 'staff')
+    .catch(err => {
+        return authenticateToken(token, 'managers')
+    })
+  }),
+], validate, function(req, res) {
+  return db.query("SELECT year, month, countOrders as ordercount, sumOrdersCost as revenue FROM singleRestaurantOrdersStatsMonthly($1)", [req.params.rname])
+    .then(result => res.send(result))
+    .catch(err => res.failure(`${err}`))
+})
+
+restaurant.post('/:rname/foodstats', [
+  cookie('authToken').exists().custom(token => {
+    return authenticateToken(token, 'staff')
+    .catch(err => {
+        return authenticateToken(token, 'managers')
+    })
+  }),
+], validate, function(req, res) {
+  return db.query("SELECT year, month, foodName, totalqty FROM singleRestaurantFoodOrdersStatsMonthly($1)", [req.params.rname])
+    .then(result => res.send(result))
+    .catch(err => res.failure(`${err}`))
+})
+
+restaurant.post('/:rname/promostats', [
+  cookie('authToken').exists().custom(token => {
+    return authenticateToken(token, 'staff')
+    .catch(err => {
+        return authenticateToken(token, 'managers')
+    })
+  }),
+], validate, function(req, res) {
+  return db.query("SELECT * FROM singleRestaurantPromotionsStats($1)", [req.params.rname])
+    .then(result => res.send(result))
+    .catch(err => res.failure(`${err}`))
+})
+
 restaurant.post('/new', [
   cookie('authToken')
     .exists(),

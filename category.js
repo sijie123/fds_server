@@ -6,7 +6,7 @@ const { validate, db, generateToken, authenticateUserPass, authenticateToken } =
 // List all categories. Offset optional.
 category.get('/', function (req, res) {
   offset = req.query.offset || 0;
-  return db.query("SELECT cname FROM category")
+  return db.query("SELECT cname FROM categories")
     .then(result => res.success({categories: result}))
     .catch(err => res.failure(`${err}`))
 })
@@ -23,7 +23,7 @@ category.post('/', [
   return db.query("SELECT R.name, R.location, R.minorder, array_agg(DISTINCT(FC.category)) as categories \
                    FROM restaurants as R \
                    INNER JOIN food as F ON R.name = F.restaurantname \
-                   INNER JOIN foodcategory as FC ON F.name = FC.foodname AND R.name = FC.restaurantname \
+                   INNER JOIN foodcategories as FC ON F.name = FC.foodname AND R.name = FC.restaurantname \
                    WHERE CASE \
                      WHEN COALESCE(array_length($1::VARCHAR[], 1), 0) > 0 \
                      THEN FC.category = ANY ($1) \
@@ -31,14 +31,6 @@ category.post('/', [
                    END \
                    GROUP BY R.name \
                    LIMIT 30 OFFSET $2", [req.body.cname, req.query.offset])
-    .then(result => res.success({restaurants: result}))
-    .catch(err => res.failure(`${err}`))
-})
-
-category.post('/test', function (req, res) {
-  let arr = req.body.a;
-  console.log(arr);
-  return db.query("SELECT cname FROM category WHERE cname = ANY ($1)", [arr])
     .then(result => res.success({restaurants: result}))
     .catch(err => res.failure(`${err}`))
 })
