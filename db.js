@@ -1,5 +1,5 @@
 const pgp = require('pg-promise')();
-const conn = 'postgres://fdsdbuser:2102fdsgroup57@localhost:5432/fds';
+const conn = require('./config.js').DB_CONNECTION;
 
 // Creating a new database instance from the connection details:
 const db = pgp(conn);

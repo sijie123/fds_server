@@ -1,8 +1,12 @@
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser');
-const port = 3001
 var cookieParser = require('cookie-parser')
+
+const config = require("./config.js");
+const SERVER_IP = config.SERVER_IP;
+const FRONTEND_PORT = config.FRONTEND_PORT;
+const BACKEND_PORT = config.BACKEND_PORT;
 
 const customerRouter = require('./customer.js');
 const restaurantRouter = require('./restaurant.js');
@@ -27,7 +31,7 @@ app.use((req, res, next) => {
     next();
 })
 app.use(function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", "http://54.169.81.205:3000"); // update to match the domain you will make the request from
+    res.header("Access-Control-Allow-Origin", `http://${SERVER_IP}:${FRONTEND_PORT}`);
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     res.header("Access-Control-Allow-Credentials", "true");
     next();
@@ -40,6 +44,6 @@ app.use('/order', orderRouter);
 app.use('/manager', managerRouter);
 app.use('/rider', riderRouter);
 
-app.get('/', (req, res) => res.send('Hello World!'))
+app.get('/', (req, res) => res.send('Hello World!))
 
-app.listen(port, () => console.log(`FDS Server listening on port ${port}!`))
+app.listen(port, () => console.log(`FDS Server listening on port ${BACKEND_PORT}!`))
