@@ -21,6 +21,36 @@ restaurant.get('/:rname', function (req, res) {
     .catch(err => res.failure(`${err}`))
 })
 
+// User login
+restaurant.post('/login', [
+  body('username')
+    .exists(),
+  body('password')
+    .exists()
+], validate, async function(req, res) {
+  authenticateUserPass(req.body.username, req.body.password, 'staff')
+    .then(() => generateToken())
+    .then(async (token) => {
+      return db.none("UPDATE users SET token = $1 WHERE username = $2", [token, req.body.username])
+        .then(() => token) // Passes token to next step
+    })
+    .then((token) => res.cookie('authToken', token).success({username: req.body.username}))
+    .catch(err => res.failure(`${err}`, 401))
+})
+
+restaurant.post('/work', [
+  cookie('authToken').exists().custom(token => authenticateToken(token, 'staff')),
+], validate, function(req, res) {
+  return db.one("SELECT restaurantname FROM staff \
+                 WHERE username = ( \
+                   SELECT username FROM users \
+                   INNER JOIN staff USING (username) \
+                   WHERE token = $1 \
+                 )", [req.cookies.authToken])
+    .then(result => res.send(result))
+    .catch(err => res.failure(`${err}`))
+})
+
 restaurant.post('/:rname/stats', [
   cookie('authToken').exists().custom(token => {
     return authenticateToken(token, 'staff')
@@ -55,7 +85,7 @@ restaurant.post('/:rname/promostats', [
     })
   }),
 ], validate, function(req, res) {
-  return db.query("SELECT * FROM singleRestaurantPromotionsStats($1)", [req.params.rname])
+  return db.query("SELECT promoid, code, runtime::text, usecount FROM singleRestaurantPromotionsStats($1)", [req.params.rname])
     .then(result => res.send(result))
     .catch(err => res.failure(`${err}`))
 })

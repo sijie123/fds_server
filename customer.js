@@ -43,6 +43,15 @@ customer.post('/login', [
     .catch(err => res.failure(`${err}`, 401))
 })
 
+customer.post('/addresses', [
+  cookie('authToken').exists().custom(token => authenticateToken(token, 'customers'))
+], validate, async function(req, res) {
+  return db.one("SELECT array_agg(deliveryLocation) AS locations \
+                 FROM getRecentLocations( (SELECT username FROM users INNER JOIN customers USING (username) WHERE token = $1 ))", [req.cookies.authToken])
+    .then(result => res.success(result))
+    .catch(err => console.log(err));
+})
+
 customer.post('/testlogin', [
   body('username')
     .exists(),
@@ -64,6 +73,33 @@ customer.post('/testlogin', [
       cardnumber: data[0][0].cardnumber
     }))
     .catch(err => res.failure(`${err}`, 401))
+})
+
+customer.post('/info', [
+  cookie('authToken').exists().custom(token => authenticateToken(token, 'customers'))
+], validate, function (req, res) {
+  return db.one("SELECT rewardPoints, cardNumber FROM customers \
+                 WHERE username = ( \
+                   SELECT username FROM users \
+                   INNER JOIN customers USING (username) \
+                   WHERE token = $1 \
+                 )", [req.cookies.authToken])
+  .then(customerInfo => res.success(customerInfo))
+  .catch(err => res.failure(`${err}`));
+})
+
+customer.post('/updateCard', [
+  body('cardnumber').exists(),
+  cookie('authToken').exists().custom(token => authenticateToken(token, 'customers'))
+], validate, function (req, res) {
+  return db.none("UPDATE customers SET cardnumber = $1 \
+                  WHERE username = ( \
+                    SELECT username FROM users \
+                    INNER JOIN customers USING (username) \
+                    WHERE token = $2 \
+                  )", [req.body.cardnumber, req.cookies.authToken])
+    .then(() => res.success({cardnumber: req.body.cardnumber}))
+    .catch(err => res.failure(`Failed to set card number. ${err}`))
 })
 
 customer.post('/testcard', [

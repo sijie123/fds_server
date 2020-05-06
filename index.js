@@ -14,6 +14,7 @@ const categoryRouter = require('./category.js');
 const orderRouter = require('./order.js');
 const managerRouter = require('./manager.js');
 const riderRouter = require('./rider.js');
+const miscRouter = require('./misc.js');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -43,7 +44,8 @@ app.use('/category', categoryRouter);
 app.use('/order', orderRouter);
 app.use('/manager', managerRouter);
 app.use('/rider', riderRouter);
+app.use('/misc', miscRouter);
 
-app.get('/', (req, res) => res.send('Hello World!))
+app.get('/', (req, res) => res.send('Hello World!'));
 
-app.listen(port, () => console.log(`FDS Server listening on port ${BACKEND_PORT}!`))
+app.listen(BACKEND_PORT, () => console.log(`FDS Server listening on port ${BACKEND_PORT}!`));

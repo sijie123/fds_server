@@ -22,7 +22,7 @@ rider.post('/new', [
     .catch(err => res.failure(`Failed to create user. ${err}`))
 })
 
-// User login
+//User login
 rider.post('/login', [
   body('username')
     .exists(),
@@ -39,6 +39,30 @@ rider.post('/login', [
     .catch(err => res.failure(`${err}`, 401))
 })
 
+//User login
+rider.post('/status', [
+  cookie('authToken').exists().custom(token => authenticateToken(token, 'riders'))
+], validate, async function(req, res) {
+    return db.one("SELECT riderstatus FROM riderStatus( (SELECT username FROM users INNER JOIN riders USING (username) WHERE token = $1) )", [req.cookies.authToken])
+    .then((riderstatus) => res.success({status: riderstatus}))
+    .catch(err => res.failure(`${err}`, 401))
+})
+
+//User login
+rider.post('/update', [
+  cookie('authToken').exists().custom(token => authenticateToken(token, 'riders'))
+], validate, async function(req, res) {
+  db.tx(async t => {
+    let nextStatus = await t.one("SELECT riderstatus FROM riderStatus( (SELECT username FROM users INNER JOIN riders USING (username) WHERE token = $1) )", [req.cookies.authToken])
+    let capitalizeNextStatus = nextStatus["riderstatus"].charAt(0).toUpperCase() + nextStatus["riderstatus"].slice(1)
+    let functionName = `rider${capitalizeNextStatus}`;
+    let command = `SELECT * FROM ${functionName}((SELECT username FROM users INNER JOIN riders USING (username) WHERE token = $1))`;
+    let update = await t.one(command, [req.cookies.authToken]);
+    return update;
+  }).then((update) => res.success(update))
+    .catch(err => res.failure(`Failed to create user. ${err}`))
+})
+
 rider.post('/:rname/stats', [
   cookie('authToken').exists().custom(token => {
     return authenticateToken(token, 'riders')
@@ -47,41 +71,9 @@ rider.post('/:rname/stats', [
     })
   }),
 ], validate, function(req, res) {
-  return db.query("SELECT * FROM singleRiderOrdersStatsMonthly($1)", [req.params.rname])
-    .then(result => res.send(result))
+  return db.query("SELECT riderName, year, month, countOrders, sumInterval::text, avgInterval::text, sumRating, avgRating, salary FROM singleRiderOrdersStatsMonthly($1)", [req.params.rname])
+    .then(result => {console.log(result); res.send(result)})
     .catch(err => res.failure(`${err}`))
-})
-// rider.get('/location', [
-//     cookie('authToken').exists()
-// ], validate, function(req,res) {
-//     db.one("SELECT riders.username, riders.latitude, riders.longitude from riders \
-//             INNER JOIN users \
-//             ON users.username = riders.username \
-//             WHERE users.token = $1", [req.cookies.authToken]
-//     ).then(result => res.success({rider: result}))
-//     .catch(err => res.failure(`${err}`))
-// })
-// rider.post('/location', [
-//     cookie('authToken').exists(),
-//     body('latitude').exists().isNumeric(),
-//     body('longitude').exists().isNumeric()
-// ], validate, function(req, res) {
-//     db.one("UPDATE riders \
-//              SET latitude = $2, \
-//                  longitude = $3 \
-//              WHERE username IN ( \
-//                  SELECT riders.username FROM riders \
-//                  INNER JOIN users \
-//                  ON users.username = riders.username \
-//                  WHERE users.token = $1 \
-//              ) RETURNING username, latitude, longitude", [req.cookies.authToken, req.body.latitude, req.body.longitude]
-//     ).then(updatedRow => {res.success({rider: updatedRow})})
-//      .catch(err => res.failure(`${err}`))
-// })
-
-// About page route.
-rider.get('/about', function (req, res) {
-  res.send('About this wiki');
 })
 
 module.exports = rider;

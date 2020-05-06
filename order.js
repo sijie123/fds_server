@@ -93,9 +93,37 @@ order.post('/', [
                     (SELECT promocode \
                     FROM Orders \
                     WHERE id = $1), $1);", [neworder["id"]]);
+    // Deducts from both the customer's current reward point balance and order's total cost (post-promotion application)
+    if (req.body.rewardpoints) {
+     await t.none("SELECT useRewardPoints($1, $2);", [neworder["customername"], neworder["id"]]);
+    }
     return neworder["id"];
     }).then(result => res.success({orderid: result}))
       .catch(err => res.failure(`${err}`))
+})
+
+order.post('/review', [
+  cookie('authToken').exists().custom(token => authenticateToken(token, 'customers')),
+  body('orderid').exists(),
+  body('deliveryrating').exists(),
+  body('foodreview').isArray() //Verify that it is an array... Not string or something.
+], validate, function(req, res) {
+  db.tx(async t => {
+    await t.none("INSERT INTO foodreviews(orderid, foodname, restaurantname, customername, rating, content) \
+                  SELECT $1, orderitems.foodname, ( \
+                    SELECT restaurantname FROM orders WHERE id = $1 \
+                  ), ( \
+                    SELECT username  FROM users INNER JOIN customers USING (username) WHERE token = $2 \
+                  ), orderitems.rating, orderitems.content \
+                  FROM json_to_recordset($3) as orderitems(foodname TEXT, rating INTEGER, content TEXT)", [req.body.orderid, req.cookies.authToken, JSON.stringify(req.body.foodreview)]);
+    await t.none("INSERT INTO deliveryratings (orderid, ridername, customername, rating) \
+                  SELECT $1, ( \
+                    SELECT ridername FROM orders WHERE id = $1 \
+                  ), ( \
+                    SELECT username  FROM users INNER JOIN customers USING (username) WHERE token = $2 \
+                  ), $3", [req.body.orderid, req.cookies.authToken, req.body.deliveryrating])
+  }).then(success => res.success(req.body.orderid))
+  .catch(error => {console.log(error); res.failure(`Failed to add review: ${error}`)});
 })
 
 module.exports = order;
