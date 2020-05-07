@@ -71,9 +71,9 @@ rider.post('/:rname/stats', [
     })
   }),
 ], validate, function(req, res) {
-  return db.query("SELECT riderName, year, month, countOrders, sumInterval::text, avgInterval::text, sumRating, avgRating, salary FROM singleRiderOrdersStatsMonthly($1)", [req.params.rname])
+  return db.query("SELECT riderName, year, month, countOrders, sumInterval::text, avgInterval::text, countRating, sumRating, avgRating, salary FROM singleRiderOrdersStatsMonthly($1)", [req.params.rname])
     .then(result => {console.log(result); res.send(result)})
-    .catch(err => res.failure(`${err}`))
+    .catch(err => {console.log(err); res.failure(`${err}`)})
 })
 
 module.exports = rider;

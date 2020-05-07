@@ -60,10 +60,10 @@ order.post('/', [
   body('deliverylocation').exists(),
   body('paymentmethod').exists().custom(value => value === "CASH" || value === "CARD"),
   body('foodorder').exists(),
-  body('promocode').exists(),
+  //body('promocode').exists(),
   cookie('authToken').exists().custom(token => authenticateToken(token, 'customers')),
 ], validate, function (req, res) {
-  console.log(req.cookies);
+  console.log(req.promocode);
   db.tx(async t => {
     let neworder = await t.one("INSERT INTO orders (deliverylocation, totalcost, deliveryfee, paymentmethod, creation, departure, arrival, collection, delivery, restaurantName, customername, ridername, promocode) \
                   SELECT $1, ( \
@@ -95,8 +95,20 @@ order.post('/', [
                     WHERE id = $1), $1);", [neworder["id"]]);
     // Deducts from both the customer's current reward point balance and order's total cost (post-promotion application)
     if (req.body.rewardpoints) {
-     await t.none("SELECT useRewardPoints($1, $2);", [neworder["customername"], neworder["id"]]);
+      await t.one("SELECT useRewardPoints( ( \
+                      SELECT username \
+                      FROM users \
+                      INNER JOIN customers USING (username) \
+                      WHERE token = $1 \
+                    ), $2);", [req.cookies.authToken, neworder["id"]]);
     }
+    // Updates reward points for customer once all deductions performed
+    await t.one("SELECT updateRewardPoints( ( \
+                      SELECT username \
+                      FROM users \
+                      INNER JOIN customers USING (username) \
+                      WHERE token = $1 \
+                    ), $2);", [req.cookies.authToken, neworder["id"]]);
     return neworder["id"];
     }).then(result => res.success({orderid: result}))
       .catch(err => res.failure(`${err}`))

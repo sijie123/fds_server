@@ -65,7 +65,7 @@ manager.post('/monthlyorderbycustomer', [
 manager.post('/monthlyorderbyrider', [
   cookie('authToken').exists().custom(token => authenticateToken(token, 'managers')),
 ], validate, function (req, res) {
-  return db.query("SELECT riderName, year, month, countOrders, sumInterval::text, avgInterval::text, sumRating, avgRating, salary FROM ridersOrdersStatsMonthly()")
+  return db.query("SELECT riderName, year, month, countOrders, sumInterval::text, avgInterval::text, countRating, sumRating, avgRating, salary FROM ridersOrdersStatsMonthly()")
     .then(result => res.send(result))
     .catch(err => res.failure(`${err}`))
 })
