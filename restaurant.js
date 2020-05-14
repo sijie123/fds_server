@@ -85,7 +85,7 @@ restaurant.post('/:rname/promostats', [
     })
   }),
 ], validate, function(req, res) {
-  return db.query("SELECT promoid, code, runtime::text, usecount FROM singleRestaurantPromotionsStats($1)", [req.params.rname])
+  return db.query("SELECT promoid, code, runtime, usecount FROM singleRestaurantPromotionsStats($1)", [req.params.rname])
     .then(result => res.send(result))
     .catch(err => res.failure(`${err}`))
 })

@@ -7,14 +7,19 @@ const { validate, db, generateToken, authenticateUserPass, authenticateToken } =
 food.get('/', function (req, res) {
   offset = req.query.offset || 0;
   console.log(req.params.rname);
-  return db.query("SELECT F.name as fname, F.price, F.maxqty, F.currqty, array_agg(FC.category) as categories, AVG(FR.rating) as avgrating, COUNT(FR.rating) as countrating, array_remove(array_agg(FR.content), NULL) as reviews \
-                   FROM food as F \
-                   LEFT OUTER JOIN foodcategories as FC \
-                   ON FC.restaurantname = F.restaurantname AND FC.foodname = F.name \
+  return db.query("WITH FoodAndCategories AS ( \
+                     SELECT F.name, F.price, F.maxqty, F.currqty, F.restaurantname, array_agg(FC.category) as categories \
+                     FROM food as F \
+                     LEFT OUTER JOIN foodcategories as FC \
+                     ON FC.restaurantname = F.restaurantname AND FC.foodname = F.name \
+                     WHERE F.restaurantname = $1 AND F.currqty > 0 \
+                     GROUP BY (F.name, F.price, F.maxqty, F.currqty, F.restaurantname) \
+                     ) \
+                   SELECT FAC.name as fname, FAC.price, FAC.maxqty, FAC.currqty, FAC.categories, AVG(FR.rating) as avgrating, COUNT(FR.rating) as countrating, array_remove(array_agg(FR.content), NULL) as reviews \
+                   FROM FoodAndCategories as FAC \
                    LEFT OUTER JOIN foodreviews as FR \
-                   ON FR.restaurantname = F.restaurantname AND FR.foodname = F.name \
-                   WHERE F.restaurantname = $1 AND F.currqty > 0 \
-                   GROUP BY (F.name, F.price, F.maxqty, F.currqty) \
+                   ON FR.restaurantname = FAC.restaurantname AND FR.foodname = FAC.name \
+                   GROUP BY (FAC.name, FAC.price, FAC.maxqty, FAC.currqty, FAC.categories) \
                    LIMIT 30 OFFSET $2", [req.params.rname, offset])
     .then(result => res.success({food: result}))
     .catch(err => res.failure(`${err}`))
